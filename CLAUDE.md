@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is Voca?
 
-Voca is a voice interface for Claude Code — an ambient listener that captures speech via STT, and responds via TTS. Packaged as a Claude Code plugin with an MCP server for audio I/O.
+Voca is a voice interface for Claude Code — an ambient listener that captures speech via STT. Packaged as a Claude Code plugin with an MCP server for audio I/O. By default, Voca operates in listen-only mode: it transcribes speech and Claude responds via text. TTS (voice responses via `speak()`) is available but off by default — only use it if the user explicitly requests voice output.
 
 ## Project Structure
 

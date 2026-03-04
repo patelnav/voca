@@ -8,7 +8,7 @@ Start voice mode for this session. Follow these steps exactly:
    ```
    curl -s 'http://127.0.0.1:7778/poll?timeout_ms=55000'
    ```
-   The first poll auto-activates STT/TTS/pipeline (one-time warmup). Use `run_in_background=true` so you stay responsive to the user.
+   The first poll auto-activates the STT pipeline (one-time warmup). Use `run_in_background=true` so you stay responsive to the user.
 
 2. **When a poll returns**: Read the output file. If there are segments:
    - Acknowledge or respond to what was said
@@ -17,7 +17,7 @@ Start voice mode for this session. Follow these steps exactly:
 
 3. **Re-poll immediately** after processing each result. Launch another background curl right away.
 
-4. **TTS responses**: When you want to speak aloud, use the `speak(text)` tool. The audio pipeline has a feedback guard — your TTS won't be picked up by the STT.
+4. **No TTS by default**: Respond via text in the Claude Code session, not with `speak()`. Only use TTS if the user explicitly asks you to speak aloud or enables voice responses.
 
 5. **Keep going** until the user explicitly asks you to stop listening, or the session ends.
 

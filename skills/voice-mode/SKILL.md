@@ -15,11 +15,11 @@ This project has an ambient voice interface via the voca MCP server. When the us
    ```
    Use `run_in_background=true`. When the poll returns, read the output.
 
-2. **Process speech**: Respond naturally to what was said.
+2. **Process speech**: Respond naturally to what was said via text in the Claude Code session.
 
 3. **Re-poll**: After processing, immediately launch another background poll to keep listening.
 
-4. **TTS**: Use `speak(text)` to respond audibly. The STT pipeline suppresses its own output to prevent feedback loops.
+4. **No TTS by default**: Do not use `speak()` unless the user explicitly asks for voice responses. Respond via text only.
 
 5. **Continue** until the user says to stop.
 
