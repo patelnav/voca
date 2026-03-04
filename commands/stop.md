@@ -2,7 +2,10 @@
 description: Stop ambient voice listening mode
 ---
 
-Stop voice mode. Mute the microphone and stop polling for speech.
+Stop voice mode by deactivating the voice runtime.
 
-1. Mute the mic: call `set_audio_config(mute=true)`
+1. Deactivate runtime:
+   ```bash
+   curl -s -X POST http://127.0.0.1:7778/deactivate
+   ```
 2. Confirm to the user that voice mode has been stopped.

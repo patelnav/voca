@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import tempfile
+import threading
 
 import numpy as np
 import soundfile as sf
@@ -19,19 +20,29 @@ class ParakeetSTT:
     def __init__(self, model_name: str):
         self.model_name = model_name
         self._model = None
-        self._load_model()
+        self._model_lock = threading.Lock()
 
     def _load_model(self) -> None:
-        LOGGER.info("Loading Parakeet STT model: %s", self.model_name)
-        from parakeet_mlx import from_pretrained
+        if self._model is not None:
+            return
 
-        self._model = from_pretrained(self.model_name)
-        LOGGER.info("Parakeet STT model ready")
+        with self._model_lock:
+            if self._model is not None:
+                return
+
+            LOGGER.info("Loading Parakeet STT model: %s", self.model_name)
+            from parakeet_mlx import from_pretrained
+
+            self._model = from_pretrained(self.model_name)
+            LOGGER.info("Parakeet STT model ready")
+
+    def ensure_loaded(self) -> None:
+        self._load_model()
 
     def transcribe_array(self, audio: np.ndarray) -> str:
         """Batch transcription via temp WAV file. Kept as fallback/testing."""
         if self._model is None:
-            raise RuntimeError("Parakeet model is not initialized")
+            self._load_model()
 
         if audio.size == 0:
             return ""

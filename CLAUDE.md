@@ -12,7 +12,7 @@ Voca is a voice interface for Claude Code — an ambient listener that captures 
 .claude-plugin/      # Plugin manifest
 mcp-server/          # Python — Audio MCP server (STT, TTS, VAD)
 .mcp.json            # MCP server configuration
-commands/            # Slash commands (/voca:voice)
+commands/            # Slash commands (/voca:start, /voca:stop)
 skills/              # Auto-activatable skills (voice-mode)
 archive/             # Legacy code (old TypeScript impl, experiments)
 ```
@@ -43,7 +43,7 @@ Python MCP server (stdio transport) that handles all audio I/O:
 
 ### Starting Voice Mode
 
-Run `/voca:voice` to start the voice polling loop. This begins background HTTP polling for speech.
+Run `/voca:start` to start the voice polling loop. This begins background HTTP polling for speech. Run `/voca:stop` to deactivate and free all model memory.
 
 ### Prerequisites
 

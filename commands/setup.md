@@ -79,4 +79,4 @@ If the user wants system audio capture:
 
 ## Done
 
-If STT and TTS both work, setup is complete. Tell the user to run `/voca:voice` to start voice mode.
+If STT and TTS both work, setup is complete. Tell the user to run `/voca:start` to start voice mode.

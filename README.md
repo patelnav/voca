@@ -45,7 +45,7 @@ Add the marketplace and install the plugin:
 
 2. **Start a Voice Session**: Once setup is complete, start the ambient voice interface:
    ```bash
-   /voca:voice
+   /voca:start
    ```
 
 *Claude will now listen in the background and respond seamlessly to your voice.*

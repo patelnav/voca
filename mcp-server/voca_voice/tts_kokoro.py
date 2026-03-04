@@ -6,7 +6,6 @@ import time
 
 import numpy as np
 import sounddevice as sd
-from mlx_audio.tts.utils import load_model
 
 LOGGER = logging.getLogger(__name__)
 
@@ -16,18 +15,29 @@ class KokoroTTS:
         self._default_voice = default_voice
         self._model_name = model_name
         self._model = None
+        self._model_lock = threading.Lock()
 
         self._speak_lock = threading.Lock()
         self._playback_thread: threading.Thread | None = None
         self._playback_stop_event: threading.Event | None = None
         self._speaking = False
 
-        self._load_model()
-
     def _load_model(self) -> None:
-        LOGGER.info("Loading Kokoro TTS model: %s", self._model_name)
-        self._model = load_model(self._model_name)
-        LOGGER.info("Kokoro TTS model ready")
+        if self._model is not None:
+            return
+
+        with self._model_lock:
+            if self._model is not None:
+                return
+
+            LOGGER.info("Loading Kokoro TTS model: %s", self._model_name)
+            from mlx_audio.tts.utils import load_model
+
+            self._model = load_model(self._model_name)
+            LOGGER.info("Kokoro TTS model ready")
+
+    def ensure_loaded(self) -> None:
+        self._load_model()
 
     def is_speaking(self) -> bool:
         with self._speak_lock:
@@ -111,7 +121,10 @@ class KokoroTTS:
 
     def _generate_audio(self, text: str, voice: str) -> tuple[np.ndarray, int]:
         if self._model is None:
-            raise RuntimeError("TTS model is not initialized")
+            self._load_model()
+
+        if self._model is None:
+            raise RuntimeError("TTS model failed to initialize")
 
         results = self._model.generate(
             text=text,

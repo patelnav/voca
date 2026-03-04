@@ -4,13 +4,11 @@ description: Start ambient voice listening mode
 
 Start voice mode for this session. Follow these steps exactly:
 
-1. **Unmute the mic**: Call `set_audio_config(mute=false)` to ensure audio capture is active.
-
-2. **Start polling loop**: Run this command in the background:
+1. **Start polling loop**: Run this command in the background:
    ```
    curl -s 'http://127.0.0.1:7778/poll?timeout_ms=55000'
    ```
-   Use `run_in_background=true` so you stay responsive to the user.
+   The first poll auto-activates STT/TTS/pipeline (one-time warmup). Use `run_in_background=true` so you stay responsive to the user.
 
 2. **When a poll returns**: Read the output file. If there are segments:
    - Acknowledge or respond to what was said
