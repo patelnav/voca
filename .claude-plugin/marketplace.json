@@ -1,0 +1,13 @@
+{
+  "name": "patelnav-voca",
+  "owner": {
+    "name": "Nav Patel"
+  },
+  "plugins": [
+    {
+      "name": "voca",
+      "source": "./",
+      "description": "Ambient voice interface for Claude Code — listen via STT, respond via TTS"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "voca": {
+      "command": "uv",
+      "args": ["--directory", "./mcp-server", "run", "python", "-m", "voca_voice"],
+      "env": {
+        "PYTORCH_ENABLE_MPS_FALLBACK": "1"
+      }
+    }
+  }
+}

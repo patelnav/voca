@@ -1,0 +1,63 @@
+---
+# A concise description of the rule's purpose for the AI agent.
+description: Instructs on using the chained builder pattern for LangGraphJS StateGraph/MessageGraph construction in TypeScript to avoid common type errors with addEdge/addConditionalEdges when called separately.
+# Glob patterns specify which files this rule applies to.
+# Adjust this pattern to be more specific if needed (e.g., only files importing LangGraph).
+globs:
+  - "**/*.{ts,tsx}"
+# If 'false', the agent decides when to apply the rule based on context and description.
+# If 'true', the rule is always included in the prompt for matching files.
+alwaysApply: false
+---
+
+# LangGraph StateGraph/MessageGraph Typing Rule
+
+## Issue: TypeScript Errors with `addEdge` / `addConditionalEdges`
+
+When constructing a `StateGraph` or `MessageGraph` instance in TypeScript, calling `graph.addEdge()` or `graph.addConditionalEdges()` as separate statements *after* the initial graph instantiation and `graph.addNode()` calls can lead to type inference errors.
+
+**Common errors include:**
+
+* `Argument of type '"nodeName"' is not assignable to parameter of type '"__start__" | "__end__"'` when adding an edge involving `START` or `END`.
+* Similar type mismatches for regular node names in edge definitions.
+
+These errors often occur despite the code functioning correctly at runtime. They seem to arise because TypeScript struggles to correctly infer the set of available node names when the graph modification methods (`addEdge`, `addNode`, etc.) are not chained together directly from the graph constructor.
+
+## Solution: Use the Chained Builder Pattern
+
+The recommended and type-safe approach is to use a **chained builder pattern** for graph construction.
+
+1.  Instantiate the graph (`new StateGraph(...)` or `new MessageGraph(...)`).
+2.  Chain all `addNode()` calls immediately after the constructor.
+3.  Chain all `addEdge()` and `addConditionalEdges()` calls *after* all nodes have been added.
+
+**Incorrect (May cause TS errors):**
+
+```typescript
+import { START, END, StateGraph } from "@langchain/langgraph";
+
+// Define your state interface or annotation
+interface MyState {
+  value: string;
+}
+const MyStateAnnotation = { value: "" }; // Example annotation
+
+// Define node functions (replace with actual logic)
+const nodeAFunc = (state: MyState) => { console.log("Node A"); return { value: state.value + "A" }; };
+const nodeBFunc = (state: MyState) => { console.log("Node B"); return { value: state.value + "B" }; };
+
+// --- Problematic Pattern ---
+const graph = new StateGraph({ channels: MyStateAnnotation });
+
+// Nodes added separately
+graph.addNode("nodeA", nodeAFunc);
+graph.addNode("nodeB", nodeBFunc);
+
+// Edges added later - THIS CAN CAUSE TYPESCRIPT ERRORS
+graph.addEdge(START, "nodeA"); // Potential error: Type '"nodeA"' not assignable to type '"__start__" | "__end__"'
+graph.addEdge("nodeA", "nodeB"); // Potential error: Type '"nodeB"' not assignable to type '"nodeA"'
+graph.addEdge("nodeB", END); // Potential error: Type '"__end__"' not assignable to type '"nodeB"'
+// --- End Problematic Pattern ---
+
+// Compilation step (example)
+// const app = graph.compile();

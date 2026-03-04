@@ -1,0 +1,74 @@
+# Cursor Rules for the Voca Project
+
+## General
+
+*   Use `pnpm` for package management (e.g., `pnpm install`, `pnpm add`).
+*   When running git commands, include the `--no-pager` flag.
+*   Avoid using `as any` for type casting. Only use it as a last resort when no other reasonable typing solution is apparent, and briefly justify its use if necessary.
+*   If an `edit_file` attempt consistently results in 'no changes made' for a specific modification, try using `reapply` immediately after the failed `edit_file` attempt. It might succeed where the initial application failed.
+
+## Execution
+
+*   Execute TypeScript scripts (like test runners or utility scripts ending in `.ts`) using `npx tsx <script_name>`.
+*   Ensure scripts requiring environment variables (especially `LINEAR_API_KEY` or LLM keys) load them from the `.env` file, typically by including `dotenv.config()` at the script's start.
+*   When asked to run a command or test script, prefer executing it directly using the available tools rather than just providing the command text for the user to copy and paste.
+*   Execute the main CLI for single, non-interactive commands using `pnpm run dev -- <command> | cat`.
+*   Execute Vitest tests using the `test` script defined in `package.json` (which runs `vitest run`) via `pnpm test` for a single run, or `pnpm test:watch` (which runs `vitest watch`) for watch mode.
+*   When debugging failures, prefer running tests with `--bail 1` (e.g., `pnpm vr <file_path> --bail 1`) to stop after the first failing test.
+
+## Example
+
+*   Example of executing a command:
+    ```
+    pnpm run dev -- <command> | cat
+    ```
+
+*   Example of executing a test script:
+    ```
+    npx tsx <script_name>
+    ```
+
+*   Example of executing a Vitest test (stopping on first failure):
+    ```
+    pnpm vr <file_path> --bail 1
+    ```
+
+## Debugging
+
+*   **TypeScript Issues:** If the first attempt to fix a TypeScript type error or similar issue fails, ensure you have read both the calling code (caller) and the function/method/type definition being used (callee) into context before the next attempt.
+
+## Local Development Setup
+
+*   **Redis:** The agent requires a local Redis instance for state management during development.
+    *   **Start:** Run `docker run --name voca-redis -p 6379:6379 -d redis` to start a Redis container in the background.
+    *   **Check:** Run `redis-cli ping | cat`. It should output `PONG` if the server is running.
+    *   **Stop:** Run `docker stop voca-redis` to stop the container.
+    *   **Remove:** Run `docker rm voca-redis` to remove the container if needed.
+
+## Testing Philosophy
+
+*   **Goal:** Achieve high confidence in functionality with minimal, effective tests.
+*   **Preference:** Favor End-to-End (E2E) tests that validate the integrated system using real dependencies (like Redis, external APIs) where feasible.
+*   **Redundancy:** Avoid writing lower-level unit or mocked integration tests if their core functionality is already implicitly validated by a comprehensive E2E test. If a successful E2E test implies that the underlying components must be working correctly together, the E2E test is generally sufficient.
+*   **Focus:** Write unit/integration tests primarily for complex algorithms, utility functions, or specific component logic that isn't adequately covered or is difficult to isolate/verify through E2E tests alone.
+*   **LLM Output:** Avoid asserting against the exact string content of LLM text responses (`textResponse`). Instead, verify the agent's behavior by checking state changes, tool calls, tool results, or the *intent* conveyed (if available). Matching against deterministic tool output strings (like error reasons) is acceptable.
+*   **Framework:** Use Vitest (`pnpm test`) for running all types of tests. 
+*   **Definition of Done:** Tests (unit, integration, E2E) are only considered "done" or complete when they are reliably passing in the test suite. 
+
+## End-to-End (E2E) Testing with Playwright
+
+*   **Framework:** Playwright is used for E2E testing.
+*   **Location:** Tests are located in `src/tests/playwright/`.
+*   **Configuration:** Playwright configuration is in `playwright.config.ts` at the project root.
+*   **Running Tests:**
+    *   Use the command `pnpm test:playwright`.
+    *   This script (`pnpm test:playwright` in `package.json`) runs `CI=true npx playwright test`.
+*   **Key Configuration Details & Behavior (`pnpm test:playwright`):
+    *   **CI Mode:** `CI=true` ensures the test environment behaves consistently (e.g., no reusing existing servers).
+    *   **Web Server:** The `webServer` configuration in `playwright.config.ts` automatically starts the `ui-client` development server.
+    *   **Port:** When `CI=true`, the `ui-client` dev server is started on port `2999` to avoid conflicts with a potential dev server running on port `3000`.
+    *   **Reporters:** Uses both `'list'` (for verbose terminal output) and `'html'` (for a detailed report in `playwright-report/index.html` after the run).
+    *   **Video Recording:** Videos are recorded for test executions but only retained for failed tests (`video: 'retain-on-failure'`). These are stored in the `test-results` directory.
+    *   **Trace Viewer:** Traces are captured on the first retry of a failed test. Use `pnpm exec playwright show-trace <path_to_trace.zip>` to view them.
+*   **Best Practices for Selectors:**
+    *   Prioritize using `data-testid` attributes in React components (`VocaClient.tsx`, etc.) for the most robust and maintainable test selectors.
