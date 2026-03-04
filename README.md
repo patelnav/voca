@@ -11,6 +11,8 @@
 
 ---
 
+https://github.com/user-attachments/assets/b46e59c6-129b-48a1-aafa-772585fae60b
+
 **Voca** is a Claude Code plugin that adds an ambient voice interface to your coding sessions. It listens to your microphone, transcribes speech in real-time, and speaks back—all running locally on Apple Silicon. **No cloud APIs, no latency, no data leaving your machine.**
 
 ## ✨ Features

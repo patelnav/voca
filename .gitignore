@@ -64,3 +64,7 @@ cli-log-*
 # Playwright test artifacts
 /test-results/
 /playwright-report/
+
+# Demo video (hosted on GitHub Releases)
+demo.mov
+demo.mp4
