@@ -14,50 +14,69 @@ Run `which uv`. If not found, tell the user to install it: `curl -LsSf https://a
 
 ## Step 3: Install Python dependencies
 
-Run `cd mcp-server && uv sync`. This installs all Python packages including MLX, Parakeet STT, Kokoro TTS, Silero VAD, and sounddevice.
+Run `cd mcp-server && uv sync`. This installs all Python packages including MLX, Parakeet STT, Kokoro TTS, Silero VAD, sounddevice, and the spacy English model.
 
-## Step 4: Download models
+## Step 4: Download and verify models
 
-The STT and TTS models need to be downloaded before first use. Run these commands to pre-download them so the first voice session isn't slow:
+The STT and TTS models need to be downloaded before first use (~500MB total, cached after first download). Run these checks — they'll download if needed and verify the models work:
 
+**Check STT model:**
 ```bash
 cd mcp-server && uv run python -c "from parakeet_mlx import from_pretrained; from_pretrained('mlx-community/parakeet-tdt-0.6b-v2'); print('STT model ready')"
 ```
 
+**Check TTS model + G2P pipeline (full end-to-end test):**
 ```bash
-cd mcp-server && uv run python -c "from mlx_audio.tts.utils import load_model; load_model('mlx-community/Kokoro-82M-bf16'); print('TTS model ready')"
+cd mcp-server && uv run python -c "
+from mlx_audio.tts.utils import load_model
+import numpy as np
+model = load_model('mlx-community/Kokoro-82M-bf16')
+# Test full generation pipeline including G2P (misaki + spacy)
+for r in model.generate(text='test', voice='af_heart', lang_code='a'):
+    audio = np.asarray(r.audio, dtype=np.float32).reshape(-1)
+    print(f'TTS model ready — generated {audio.shape[0]} samples at {r.sample_rate}Hz')
+    break
+"
 ```
 
-Tell the user these downloads are ~500MB total and only happen once. The models are cached locally after the first download.
+If the TTS test hangs at "Creating new KokoroPipeline", the spacy model is likely missing. Fix with:
+```bash
+cd mcp-server && uv pip install en_core_web_sm@https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+```
 
-## Step 5: Check BlackHole
+Run both model checks in parallel since they're independent.
 
-Run `brew list blackhole-2ch 2>/dev/null`. If not installed, run `brew install blackhole-2ch` (ask the user first).
+## Step 5: Check MCP server
 
-BlackHole is a virtual audio driver that lets Voca capture system audio (not just the mic). Without it, Voca only hears the microphone.
+Check if the MCP server is running: `curl -s "http://127.0.0.1:7778/poll?timeout_ms=2000"`
+- If it returns JSON (even with empty segments), the server is up.
+- If it fails, tell the user to run `/mcp` to reconnect the voca server. If that fails, check for zombie processes on port 7778: `lsof -i :7778` — kill them and retry `/mcp`.
 
-## Step 6: Aggregate audio device
+## Step 6: Test STT (speech-to-text)
 
-This is the one manual step. The user needs to create an aggregate audio device in macOS Audio MIDI Setup that combines their built-in microphone with BlackHole. Walk them through it:
+Ask the user to say something, then poll: `curl -s "http://127.0.0.1:7778/poll?timeout_ms=10000"`
+- If segments come back with transcribed text, STT works.
+- If empty after 10s, check that the correct input device is being used (the MCP server logs which device it opened on startup).
 
-1. Open **Audio MIDI Setup** (Spotlight → "Audio MIDI Setup")
-2. Click the **+** button at the bottom left → **Create Aggregate Device**
-3. Check both **Built-in Microphone** and **BlackHole 2ch**
-4. Name it something like "Voca Input"
-5. Set the clock source to **Built-in Microphone**
+## Step 7: Test TTS (text-to-speech)
 
-Then tell them to set the input device in Voca: they can either set `VOCA_INPUT_DEVICE` env var or use `set_audio_config(input_device="Voca Input")` at runtime.
+Call the `speak` MCP tool: `speak("Setup complete. You should hear this.")`
+- Ask the user if they heard audio through their speakers.
+- If the speak tool isn't available, the MCP connection may need to be restarted via `/mcp`.
+- If speak returns success but no audio is heard, check the output device with `get_audio_status()`.
 
-If the user already has an aggregate device, ask them what it's called and skip this step.
+## Step 8: BlackHole (optional)
 
-## Step 7: Verify
+BlackHole is a virtual audio driver that lets Voca capture **system audio** in addition to the microphone. This is optional — without it, Voca only hears the mic, which is fine for most use cases.
 
-Run a quick test:
-1. Check the MCP server is running: `curl -s http://127.0.0.1:7778/poll?timeout_ms=2000`
-   - If it returns JSON (even with empty segments), the server is up
-   - If it fails, the MCP server may not have started — check Claude Code's MCP status
-2. Ask the user to say something, then poll: `curl -s http://127.0.0.1:7778/poll?timeout_ms=10000`
-   - If segments come back with transcribed text, setup is complete
-3. Test TTS: call `speak("Setup complete. You should hear this.")` — ask if they heard it
+If the user wants system audio capture:
+1. `brew install blackhole-2ch`
+2. Open **Audio MIDI Setup** (Spotlight → "Audio MIDI Setup")
+3. Click **+** → **Create Aggregate Device**
+4. Check both **Built-in Microphone** and **BlackHole 2ch**
+5. Name it "Voca Input", set clock source to **Built-in Microphone**
+6. Set the input device: `set_audio_config(input_device="Voca Input")` or set `VOCA_INPUT_DEVICE=Voca Input` env var.
 
-If everything works, tell them to run `/voca:voice` to start voice mode.
+## Done
+
+If STT and TTS both work, setup is complete. Tell the user to run `/voca:voice` to start voice mode.

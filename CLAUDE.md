@@ -47,8 +47,8 @@ Run `/voca:voice` to start the voice polling loop. This begins background HTTP p
 
 ### Prerequisites
 
-- **BlackHole** (`brew install blackhole-2ch`) + aggregate audio device for mic + system audio capture
 - MCP server dependencies installed: `cd mcp-server && uv sync`
+- **BlackHole** (optional) — `brew install blackhole-2ch` + aggregate audio device for mic + system audio capture. Only needed if you want to capture system audio in addition to the microphone.
 
 ## MCP Server Development
 
