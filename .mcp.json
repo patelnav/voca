@@ -2,7 +2,7 @@
   "mcpServers": {
     "voca": {
       "command": "uv",
-      "args": ["--directory", "./mcp-server", "run", "python", "-m", "voca_voice"],
+      "args": ["--directory", "${CLAUDE_PLUGIN_ROOT}/mcp-server", "run", "python", "-m", "voca_voice"],
       "env": {
         "PYTORCH_ENABLE_MPS_FALLBACK": "1"
       }
