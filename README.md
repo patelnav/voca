@@ -21,6 +21,7 @@ https://github.com/user-attachments/assets/b46e59c6-129b-48a1-aafa-772585fae60b
 - **⚡️ Real-time Processing**: Sub-second transcription ensures fluid conversations.
 - **🔒 Privacy First**: 100% local inference. Your audio never leaves your machine.
 - **🎙️ Advanced Audio Routing**: Seamless text-to-speech and voice activity detection built directly in.
+- **🔁 Instant Focus Handoff**: Starting voice mode in a second session interrupts the active poll and transfers ownership immediately.
 
 ## 🚀 Getting Started
 
@@ -50,6 +51,8 @@ Add the marketplace and install the plugin:
    /voca:start
    ```
 
+Voca uses token-based HTTP polling under the hood. The first poll claims focus; every later poll in that session reuses the returned token. Starting voice mode in another session claims a new token and hands off listening immediately.
+
 *Claude will now listen in the background and respond seamlessly to your voice.*
 
 ## 🛠️ Tech Stack
@@ -62,4 +65,3 @@ Voca is built on cutting-edge local AI technologies to ensure maximum performanc
 | **Text-to-Speech** | Kokoro via mlx-audio | High-quality, natural voice generation |
 | **Voice Activity** | Silero VAD | Enterprise-grade voice activity detection |
 | **Runtime** | Python MCP | Model Context Protocol server over stdio |
-

@@ -43,6 +43,9 @@ Returned transcript segments may include optional timing keys: `stt_started_at`,
 ## Notes
 
 - Startup is fail-fast: STT/TTS/VAD initialization errors terminate the server.
+- `/poll` uses token-based focus ownership. The first poll without a token claims focus and returns a token that must be reused on later polls.
+- Starting a tokenless `/poll` from another session transfers focus immediately. If another poll is active, it returns `focus_transferred` right away.
+- Handoff uses a threaded HTTP server plus an audio boundary marker so speech before the handoff stays with the old owner and speech after the boundary goes to the new owner.
 - `poll_for_speech` only times out with empty response if no speech occurred during that call.
 - Transcript ring buffer is in-memory only (30-minute retention).
 

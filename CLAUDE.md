@@ -45,6 +45,8 @@ Python MCP server (stdio transport) that handles all audio I/O:
 
 Run `/voca:start` to start the voice polling loop. This begins background HTTP polling for speech. Run `/voca:stop` to deactivate and free all model memory.
 
+Voice focus is owned by the session that most recently started a tokenless `/poll`. If another session starts `/voca:start`, the active poll is interrupted immediately and returns `focus_transferred`. The next polls in that session must reuse the returned token.
+
 ### Prerequisites
 
 - MCP server dependencies installed: `cd mcp-server && uv sync`

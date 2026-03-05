@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime
 import logging
 from pathlib import Path
@@ -18,6 +19,11 @@ from .stt_parakeet import ParakeetSTT
 from .types import TranscriptSegment, count_words, utc_now
 
 LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class _SegmentBoundary:
+    done: threading.Event
 
 
 class AudioPipeline:
@@ -62,7 +68,9 @@ class AudioPipeline:
         self._speech_start_time: datetime | None = None
         self._speech_sample_count = 0
 
-        self._raw_audio_queue: queue.Queue[np.ndarray | None] = queue.Queue(maxsize=self.RAW_AUDIO_QUEUE_MAX)
+        self._raw_audio_queue: queue.Queue[np.ndarray | _SegmentBoundary | None] = queue.Queue(
+            maxsize=self.RAW_AUDIO_QUEUE_MAX
+        )
 
         self._vad_thread: threading.Thread | None = None
 
@@ -108,6 +116,18 @@ class AudioPipeline:
     def restart_stream(self) -> None:
         self._stop_stream()
         self._start_stream()
+
+    def force_segment_reset(self) -> None:
+        """Insert a hard boundary so in-flight audio is finalized for the old owner."""
+        marker = _SegmentBoundary(done=threading.Event())
+        try:
+            self._raw_audio_queue.put(marker, timeout=0.5)
+        except queue.Full:
+            LOGGER.warning("Failed to enqueue focus transfer boundary; queue remained full")
+            return
+
+        if not marker.done.wait(timeout=1.0):
+            LOGGER.warning("Timed out waiting for focus transfer boundary to flush")
 
     def _start_workers(self) -> None:
         self._vad_thread = threading.Thread(target=self._vad_worker_loop, daemon=True, name="voca-vad-worker")
@@ -208,10 +228,16 @@ class AudioPipeline:
 
     def _vad_worker_loop(self) -> None:
         while True:
-            chunk = self._raw_audio_queue.get()
-            if chunk is None:
+            item = self._raw_audio_queue.get()
+            if item is None:
                 return
 
+            if isinstance(item, _SegmentBoundary):
+                self._finalize_segment(force=True)
+                item.done.set()
+                continue
+
+            chunk = item
             config = self._config_ref
             rms = _rms(chunk)
             self._update_signal_metrics(rms)
@@ -251,34 +277,7 @@ class AudioPipeline:
             if self._segment_silence_s < config.segment_silence_s:
                 continue
 
-            # Segment complete: batch transcribe accumulated audio
-            duration_ms = int(self._speech_sample_count / SAMPLE_RATE * 1000)
-
-            if duration_ms >= int(config.min_segment_duration_s * 1000):
-                try:
-                    stt_started_at = utc_now()
-                    audio = np.concatenate(self._speech_audio_chunks)
-                    text = self._stt_model.transcribe_array(audio)
-                    stt_completed_at = utc_now()
-                    if text and count_words(text) >= self.MIN_SEGMENT_WORDS:
-                        self._on_transcript(
-                            TranscriptSegment(
-                                timestamp=self._speech_start_time,
-                                text=text,
-                                duration_ms=duration_ms,
-                                stt_started_at=stt_started_at,
-                                stt_completed_at=stt_completed_at,
-                            )
-                        )
-                except Exception:
-                    LOGGER.exception("Failed to transcribe speech segment")
-
-            # Reset for next segment
-            self._speech_audio_chunks.clear()
-            self._speech_start_time = None
-            self._speech_sample_count = 0
-            self._segment_silence_s = 0.0
-            self._is_in_speech_segment = False
+            self._finalize_segment(force=False)
 
     def _detect_speech(self, audio_chunk: np.ndarray, vad_threshold: float) -> bool:
         self._append_vad_samples(audio_chunk)
@@ -330,6 +329,37 @@ class AudioPipeline:
         self._vad_samples_available = 0
         if hasattr(self._vad_model, "reset_states"):
             self._vad_model.reset_states()
+
+    def _finalize_segment(self, *, force: bool) -> None:
+        if not self._is_in_speech_segment or self._speech_sample_count <= 0:
+            self._reset_segment_state()
+            return
+
+        duration_ms = int(self._speech_sample_count / SAMPLE_RATE * 1000)
+        min_duration_ms = int(self._config_ref.min_segment_duration_s * 1000)
+        if not force and duration_ms < min_duration_ms:
+            self._reset_segment_state()
+            return
+
+        try:
+            stt_started_at = utc_now()
+            audio = np.concatenate(self._speech_audio_chunks)
+            text = self._stt_model.transcribe_array(audio)
+            stt_completed_at = utc_now()
+            if text and count_words(text) >= self.MIN_SEGMENT_WORDS:
+                self._on_transcript(
+                    TranscriptSegment(
+                        timestamp=self._speech_start_time,
+                        text=text,
+                        duration_ms=duration_ms,
+                        stt_started_at=stt_started_at,
+                        stt_completed_at=stt_completed_at,
+                    )
+                )
+        except Exception:
+            LOGGER.exception("Failed to transcribe speech segment")
+        finally:
+            self._reset_segment_state()
 
     def _update_signal_metrics(self, rms: float) -> None:
         now = time.monotonic()
