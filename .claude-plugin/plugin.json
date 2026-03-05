@@ -1,6 +1,6 @@
 {
   "name": "voca",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Ambient voice interface for Claude Code — listen via STT, respond via text",
   "commands": "./commands/",
   "skills": "./skills/"

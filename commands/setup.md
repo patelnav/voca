@@ -14,7 +14,7 @@ Run `which uv`. If not found, tell the user to install it: `curl -LsSf https://a
 
 ## Step 3: Install Python dependencies
 
-Run `cd mcp-server && uv sync`. This installs all Python packages including MLX, Parakeet STT, Kokoro TTS, Silero VAD, sounddevice, and the spacy English model.
+Run `cd ${CLAUDE_PLUGIN_ROOT}/mcp-server && uv sync`. This installs all Python packages including MLX, Parakeet STT, Kokoro TTS, Silero VAD, sounddevice, and the spacy English model.
 
 ## Step 4: Download and verify models
 
@@ -22,12 +22,12 @@ The STT and TTS models need to be downloaded before first use (~500MB total, cac
 
 **Check STT model:**
 ```bash
-cd mcp-server && uv run python -c "from parakeet_mlx import from_pretrained; from_pretrained('mlx-community/parakeet-tdt-0.6b-v2'); print('STT model ready')"
+cd ${CLAUDE_PLUGIN_ROOT}/mcp-server && uv run python -c "from parakeet_mlx import from_pretrained; from_pretrained('mlx-community/parakeet-tdt-0.6b-v2'); print('STT model ready')"
 ```
 
 **Check TTS model + G2P pipeline (full end-to-end test):**
 ```bash
-cd mcp-server && uv run python -c "
+cd ${CLAUDE_PLUGIN_ROOT}/mcp-server && uv run python -c "
 from mlx_audio.tts.utils import load_model
 import numpy as np
 model = load_model('mlx-community/Kokoro-82M-bf16')
@@ -41,7 +41,7 @@ for r in model.generate(text='test', voice='af_heart', lang_code='a'):
 
 If the TTS test hangs at "Creating new KokoroPipeline", the spacy model is likely missing. Fix with:
 ```bash
-cd mcp-server && uv pip install en_core_web_sm@https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+cd ${CLAUDE_PLUGIN_ROOT}/mcp-server && uv pip install en_core_web_sm@https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 ```
 
 Run both model checks in parallel since they're independent.
