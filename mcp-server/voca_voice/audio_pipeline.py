@@ -14,7 +14,7 @@ import numpy as np
 import sounddevice as sd
 import torch
 
-from .config import CHANNELS, SAMPLE_RATE, AudioConfig
+from .config import SAMPLE_RATE, AudioConfig
 from .stt_parakeet import ParakeetSTT
 from .types import TranscriptSegment, count_words, utc_now
 
@@ -137,17 +137,19 @@ class AudioPipeline:
         config = self._config_ref
         resolved_device = _resolve_input_device(config.input_device)
         device_name = _input_device_name(resolved_device)
+        channels = _input_device_channels(resolved_device)
 
         LOGGER.info(
-            "Starting audio capture stream (device_index=%s, device_name=%s)",
+            "Starting audio capture stream (device_index=%s, device_name=%s, channels=%s)",
             resolved_device,
             device_name,
+            channels,
         )
 
         stream = sd.InputStream(
             device=resolved_device,
             samplerate=SAMPLE_RATE,
-            channels=CHANNELS,
+            channels=channels,
             dtype="float32",
             callback=self._audio_callback,
         )
@@ -205,7 +207,12 @@ class AudioPipeline:
         if not self._running:
             return
 
-        chunk = np.asarray(indata).reshape(-1).astype(np.float32, copy=False)
+        data = np.asarray(indata, dtype=np.float32)
+        # Downmix multi-channel to mono by averaging across channels
+        if data.ndim == 2 and data.shape[1] > 1:
+            chunk = data.mean(axis=1)
+        else:
+            chunk = data.reshape(-1)
         if chunk.size == 0:
             return
 
@@ -447,6 +454,21 @@ def _find_builtin_microphone(devices: list[dict]) -> int | None:
         if any(token in name for token in candidates):
             return index
     return None
+
+
+def _input_device_channels(device_index: int | None) -> int:
+    """Return the number of input channels for the device, defaulting to 1."""
+    try:
+        if device_index is None:
+            default_input = sd.default.device[0] if sd.default.device else None
+            if default_input is None:
+                return 1
+            device = sd.query_devices(default_input)
+        else:
+            device = sd.query_devices(device_index)
+        return max(int(device.get("max_input_channels", 1)), 1)
+    except Exception:
+        return 1
 
 
 def _input_device_name(device_index: int | None) -> str:

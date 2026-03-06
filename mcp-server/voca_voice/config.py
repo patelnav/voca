@@ -4,7 +4,6 @@ from dataclasses import dataclass
 import os
 
 SAMPLE_RATE = 16_000
-CHANNELS = 1
 MAX_POLL_TIMEOUT_MS = 55_000
 
 DEFAULT_STT_MODEL = "mlx-community/parakeet-tdt-0.6b-v2"
